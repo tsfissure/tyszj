@@ -1,16 +1,11 @@
 package tyszj
 
-import (
-	"fmt"
-)
-
 type FPeerCreateFunc func() IPeer
 
 var gCreatorByTypeName = map[string]FPeerCreateFunc{}
 
 func RegisterPeerCreator(f FPeerCreateFunc) {
 	tempPeer := f()
-	fmt.Println("ReigsterPeerCreator", tempPeer.TypeName())
 	if _, ok := gCreatorByTypeName[tempPeer.TypeName()]; ok {
 		panic("Dumplicate peer type" + tempPeer.TypeName())
 	}

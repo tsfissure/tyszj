@@ -9,26 +9,10 @@ import (
 type tcpActepter struct {
 	SessionManager
 	PeerBundle
-
-	queue tyszj.IEventQueue
-	addr  string
+	PeerProperty
 
 	listener net.Listener
 	RunningTag
-}
-
-func (self *tcpActepter) Queue() tyszj.IEventQueue {
-	return self.queue
-}
-func (self *tcpActepter) Address() string {
-	return self.addr
-}
-
-func (self *tcpActepter) SetQueue(q tyszj.IEventQueue) {
-	self.queue = q
-}
-func (self *tcpActepter) SetAddress(addr string) {
-	self.addr = addr
 }
 
 func (self *tcpActepter) Start() {
@@ -83,7 +67,6 @@ func (self *tcpActepter) TypeName() string {
 }
 
 func init() {
-	fmt.Println("acceptor.init")
 	tyszj.RegisterPeerCreator(func() tyszj.IPeer {
 		p := &tcpActepter{}
 		return p
