@@ -24,6 +24,13 @@ func (self *tcpActepter) Address() string {
 	return self.addr
 }
 
+func (self *tcpActepter) SetQueue(q tyszj.IEventQueue) {
+	self.queue = q
+}
+func (self *tcpActepter) SetAddress(addr string) {
+	self.addr = addr
+}
+
 func (self *tcpActepter) Start() {
 	self.WaitStopFinished()
 	if self.IsRunning() {
@@ -70,4 +77,15 @@ func (self *tcpActepter) onNewSession(conn net.Conn) {
 	ses := newSession(conn, self)
 	ses.Start()
 	self.PostEvent(&tyszj.RecvMsgEvent{ses, &tyszj.SessionAccepted{}})
+}
+func (self *tcpActepter) TypeName() string {
+	return "tcp.Acceptor"
+}
+
+func init() {
+	fmt.Println("acceptor.init")
+	tyszj.RegisterPeerCreator(func() tyszj.IPeer {
+		p := &tcpActepter{}
+		return p
+	})
 }

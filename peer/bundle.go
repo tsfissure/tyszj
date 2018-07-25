@@ -4,10 +4,6 @@ import (
 	"tyszj"
 )
 
-type MessagePoster interface {
-	PostEvent(ev tyszj.IEvent)
-}
-
 type PeerBundle struct {
 	callback tyszj.FEventCallback
 }
