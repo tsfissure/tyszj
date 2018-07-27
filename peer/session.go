@@ -1,6 +1,7 @@
 package peer
 
 import (
+	"io"
 	"net"
 	"sync"
 	"tyszj"
@@ -49,8 +50,17 @@ func (self *tcpSession) Send(msg interface{}) {
 	self.sendQueue.Add(msg)
 }
 
-func (self *tcpSession) ReadMessage() (msg interface{}, err error) {
+func (self *tcpSession) readMessage() (msg interface{}, err error) {
+	reader, ok := self.Raw().(io.Reader)
+	if !ok || reader == nil {
+		return nil, nil
+	}
+
 	return
+}
+
+func (self *tcpSession) sendMessage(msg interface{}) {
+	msgEvent := &tyszj.SendMsgEvent{self, msg}
 }
 
 func (self *tcpSession) recvLoop() {
@@ -65,15 +75,40 @@ func (self *tcpSession) recvLoop() {
 	}
 }
 func (self *tcpSession) sendLoop() {
-
+	var writeList []interface{}
+	for {
+		writeList = writeList[0:0]
+		exit := self.sendQueue.Pick(&writeList)
+		for _, msg := range writeList {
+			self.sendMessage(msg)
+		}
+		if exit {
+			break
+		}
+	}
+	self.cleanUp()
 }
 
 func (self *tcpSession) cleanUp() {
-
+	self.cleanUpGuard.Lock()
+	defer self.cleanUpGuard.Unlock()
+	if self.conn != nil {
+		self.conn.Close()
+		self.conn = nil
+	}
+	self.exitSync.Done()
 }
 
 func (self *tcpSession) Start() {
-
+	self.sendQueue.Reset()
+	self.Peer().(ISessionManager).Add(self)
+	self.exitSync.Add(2)
+	go func() {
+		self.exitSync.Wait()
+		self.Peer().(ISessionManager).Remove(self)
+	}()
+	go self.recvLoop()
+	go self.sendLoop()
 }
 
 func newSession(conn net.Conn, peer tyszj.IPeer) *tcpSession {

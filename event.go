@@ -1,8 +1,13 @@
 package tyszj
 
+type BasicMessage struct {
+	ID      int32
+	content string
+}
+
 type RecvMsgEvent struct {
 	Ses ISession
-	Msg interface{}
+	Msg BasicMessage
 }
 
 func (self *RecvMsgEvent) Session() ISession {
@@ -15,7 +20,7 @@ func (self *RecvMsgEvent) Message() interface{} {
 
 type SendMsgEvent struct {
 	Ses ISession
-	Msg interface{}
+	Msg BasicMessage
 }
 
 func (self *SendMsgEvent) Session() ISession {
