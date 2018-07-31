@@ -7,7 +7,7 @@ type ISession interface {
 	//Session的归属Peer
 	Peer() IPeer
 
-	Send(msg interface{})
+	Send(msg BasicMessage)
 
 	ID() int64
 	SetID(id int64)

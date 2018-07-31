@@ -1,6 +1,9 @@
 package peer
 
 import (
+	"encoding/binary"
+	"errors"
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -43,39 +46,83 @@ func (self *tcpSession) Close() {
 	self.sendQueue.Add(nil)
 }
 
-func (self *tcpSession) Send(msg interface{}) {
-	if nil == msg {
-		return
-	}
-	self.sendQueue.Add(msg)
+func (self *tcpSession) Send(msg tyszj.BasicMessage) {
+	self.sendQueue.Add(&msg)
 }
 
-func (self *tcpSession) readMessage() (msg interface{}, err error) {
+var (
+	ErrMinPacket    = errors.New("packet short size")
+	ErrValidMsgSize = errors.New("valid packet size")
+)
+
+func (self *tcpSession) readMessage() (msg *tyszj.BasicMessage, err error) {
 	reader, ok := self.Raw().(io.Reader)
 	if !ok || reader == nil {
 		return nil, nil
 	}
-
+	var sizeBuf = make([]byte, 2)
+	_, err = io.ReadFull(reader, sizeBuf)
+	if err != nil {
+		return
+	}
+	if len(sizeBuf) < 2 {
+		return nil, ErrMinPacket
+	}
+	size := binary.LittleEndian.Uint16(sizeBuf)
+	if size > 60000 || size < 2 {
+		return nil, ErrValidMsgSize
+	}
+	body := make([]byte, size)
+	_, err = io.ReadFull(reader, body)
+	if err != nil {
+		return
+	}
+	msgid := binary.LittleEndian.Uint16(body[:2])
+	msg = &tyszj.BasicMessage{msgid, string(body[2:])}
 	return
 }
 
-func (self *tcpSession) sendMessage(msg interface{}) {
-	msgEvent := &tyszj.SendMsgEvent{self, msg}
+func writeFull(writer io.Writer, buf []byte) error {
+	total := len(buf)
+	for pos := 0; pos < total; {
+		n, err := writer.Write(buf[pos:])
+		if err != nil {
+			return err
+		}
+		pos += n
+	}
+	return nil
+}
+
+func (self *tcpSession) sendMessage(msg *tyszj.BasicMessage) {
+	//msgEvent := &tyszj.SendMsgEvent{self, msg}
+	writer, ok := self.Raw().(io.Writer)
+	if !ok || nil == writer {
+		return
+	}
+	msgData := []byte(msg.Content())
+	msgId := msg.ID()
+	pkt := make([]byte, 2+2+len(msgData))
+	binary.LittleEndian.PutUint16(pkt, uint16(len(msgData)+2))
+	binary.LittleEndian.PutUint16(pkt[2:], uint16(msgId))
+	copy(pkt[4:], msgData)
+	writeFull(writer, pkt)
 }
 
 func (self *tcpSession) recvLoop() {
 	for self.conn != nil {
-		msg, err := self.ReadMessage()
+		msg, err := self.readMessage()
 		if err != nil {
 			self.Close()
 			self.PostEvent(&tyszj.RecvMsgEvent{self, &tyszj.SessionClosed{}})
 			break
 		}
+		fmt.Println("msg:", msg)
 		self.PostEvent(&tyszj.RecvMsgEvent{self, msg})
 	}
 }
 func (self *tcpSession) sendLoop() {
-	var writeList []interface{}
+	var writeList []*tyszj.BasicMessage
 	for {
 		writeList = writeList[0:0]
 		exit := self.sendQueue.Pick(&writeList)
