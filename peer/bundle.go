@@ -8,6 +8,10 @@ type PeerBundle struct {
 	callback tyszj.FEventCallback
 }
 
+func (self *PeerBundle) GetBundle() *PeerBundle {
+	return self
+}
+
 func (self *PeerBundle) SetCallback(cb tyszj.FEventCallback) {
 	self.callback = cb
 }

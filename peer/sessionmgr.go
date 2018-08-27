@@ -9,7 +9,7 @@ import (
 type ISessionManager interface {
 	Add(ses tyszj.ISession)
 	Remove(ses tyszj.ISession)
-	Count() int
+	Count() int32
 
 	SetIDBase(base int64)
 }
@@ -32,6 +32,10 @@ func (self *SessionManager) Remove(ses tyszj.ISession) {
 }
 func (self *SessionManager) Count() int32 {
 	return atomic.LoadInt32(&self.count)
+}
+
+func (self *SessionManager) SetIDBase(base int64) {
+	atomic.StoreInt64(&self.sesIDGen, base)
 }
 func (self *SessionManager) VisitAllSession(f func(tyszj.ISession) bool) {
 	self.sesById.Range(func(k, v interface{}) bool {

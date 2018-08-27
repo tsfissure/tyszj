@@ -3,7 +3,6 @@ package peer
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -11,7 +10,7 @@ import (
 )
 
 type tcpSession struct {
-	PeerBundle
+	*PeerBundle
 	//原始连接
 	conn net.Conn
 	//退出同步器,收发全部完成
@@ -63,7 +62,7 @@ func (self *tcpSession) readMessage() (msg *tyszj.BasicMessage, err error) {
 	var sizeBuf = make([]byte, 2)
 	_, err = io.ReadFull(reader, sizeBuf)
 	if err != nil {
-		return
+		return nil, ErrMinPacket
 	}
 	if len(sizeBuf) < 2 {
 		return nil, ErrMinPacket
@@ -95,12 +94,11 @@ func writeFull(writer io.Writer, buf []byte) error {
 }
 
 func (self *tcpSession) sendMessage(msg *tyszj.BasicMessage) {
-	//msgEvent := &tyszj.SendMsgEvent{self, msg}
 	writer, ok := self.Raw().(io.Writer)
 	if !ok || nil == writer {
 		return
 	}
-	msgData := []byte(msg.Content())
+	msgData := []byte(msg.TheContent())
 	msgId := msg.ID()
 	pkt := make([]byte, 2+2+len(msgData))
 	binary.LittleEndian.PutUint16(pkt, uint16(len(msgData)+2))
@@ -117,7 +115,6 @@ func (self *tcpSession) recvLoop() {
 			self.PostEvent(&tyszj.RecvMsgEvent{self, &tyszj.SessionClosed{}})
 			break
 		}
-		fmt.Println("msg:", msg)
 		self.PostEvent(&tyszj.RecvMsgEvent{self, msg})
 	}
 }
@@ -163,6 +160,9 @@ func newSession(conn net.Conn, peer tyszj.IPeer) *tcpSession {
 		conn:      conn,
 		sendQueue: tyszj.NewPipe(),
 		peer:      peer,
+		PeerBundle: peer.(interface {
+			GetBundle() *PeerBundle
+		}).GetBundle(),
 	}
 	return ses
 }

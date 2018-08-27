@@ -36,6 +36,10 @@ func (self *tcpConnector) Stop() {
 	self.WaitStopFinished()
 }
 
+func (self *tcpConnector) Session() tyszj.ISession {
+	return self.session
+}
+
 func (self *tcpConnector) connect(addr string) {
 	self.SetRunningStat(true)
 	conn, err := net.Dial("tcp", addr)
@@ -58,6 +62,7 @@ func (self *tcpConnector) TypeName() string {
 func init() {
 	tyszj.RegisterPeerCreator(func() tyszj.IPeer {
 		p := &tcpConnector{}
+		p.session = newSession(nil, p)
 		return p
 	})
 }

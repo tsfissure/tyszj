@@ -1,15 +1,15 @@
 package tyszj
 
 type BasicMessage struct {
-	id      uint16
-	content string
+	Id      uint16
+	Content string
 }
 
 func (self *BasicMessage) ID() uint16 {
-	return self.id
+	return self.Id
 }
-func (self *BasicMessage) Content() string {
-	return self.content
+func (self *BasicMessage) TheContent() string {
+	return self.Content
 }
 
 type RecvMsgEvent struct {
